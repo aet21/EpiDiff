@@ -1,0 +1,65 @@
+---
+title: "Introduction to EpiDiff"
+author: Andrew E Teschendorff
+date: "`r Sys.Date()`"
+package: "`r pkg_ver('EpiDiff')`"
+output: 
+  BiocStyle::html_document:
+    theme: readable
+bibliography: EpiDiff.bib  
+
+vignette: >
+  %\VignetteIndexEntry{Estimation of Differention-State from DNA methylation data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+> __Abstract: EpiDiff is a stand-alone R-package and function for estimating the differentiation state of a DNAm sample. Although EpiDiff is applicable to DNAm data generated with diverse technologies including single-cell DNAm data, currently we only offer support for Illumina DNAm beadarray data (450k, EPICv1 and EPICv2). The function when applied to a DNAm profile will return probabilistic assignments of the sample belonging to a pluripotent, multipotent and differentiated classes, as well as continuously valued differentitation index (DI) with values bounded between 0 and 1. This DI is computed from the estimated probabilities and can be viewed as an absolute measure of differentiation with values close to 0 indicating pluripotency and values close to 1 indicating fully differentiated . For further details please see @EpiDiffPaper .__
+
+
+# Motivation and Background
+<p>There could be many applications where it would be desirable to estimate the level of differentiation displayed by a sample. For instance, induced pluripotent stem-cells (iPSCs) may differ in terms of their capacity to differentiate into a particular lineage and this may be influenced if the iPSC-state is skewed towards other lineages, this state therefore being more differentiated than true pluripotency. Another application could be to partial reprogramming protocols where the aim is to rejuvenate cells without loss of cellular identity. Here a predictor of differentiation could help assess that the reprogrammed cells are indeed still fully differentiated. Yet another application could be to identify preneoplastic samples at higher cancer-risk, based on the premise that a less differentiated state is a higher cancer-risk state.</p>
+
+
+# Tutorial Example
+The tutorial example illustrates the application of EpiDiff to a small DNAm dataset of bone-marrow derived hematopoietic cells comprising different states of fifferentiation, including hematopoetic stem-cells (HSC), hematopoietic multipotent progenitors (MPP), common myeloid progenitors (CMP) and granulocyte progenitors (GMP). In order to run the tutorial we must first load in the necessary library and data objects:
+
+```{r chunk1, eval=T, echo=T}
+library(EpiDiff);
+data(dataCD34); ##loads in DNAm data of bone-marrow derived hematopoietic cells
+ls();
+print(summary(factor(phenoJung.v)));
+```
+We can see that we have 25 samples, of which 5 are HSCs and 10 are MPPs. Of note, because of data-size restrictions, we only uploaded the DNA methylation data matrix for the CpGs that are present in our EpiDiff predictor since the rest are not needed. Now, we can apply EpiDiff
+
+```{r chunk2, eval=T, echo=T}
+ediff.o <- DoDiffRF(bmiqJung.m);
+```
+Let us now see how the estimated DI changes between the aforementioned cell-types: 
+
+```{r chunk3, eval=T, echo=T}
+orderN.v <- c("HSC","MPP","CMP","GMP");
+order.idx <- vector();
+for(ct in 1:length(orderN.v)){
+  order.idx[which(phenoJung.v==orderN.v[ct])] <- ct;
+}
+par(mfrow=c(1,2));
+par(mar=c(4,4,2,1));
+boxplot(ediff.o$di ~ order.idx,ylim=c(0,1),ylab="DI",names=orderN.v);
+boxplot(ediff.o$di ~ order.idx,ylab="DI",names=orderN.v)
+```
+We have plotted DI on two different scales in order to convey two messages. First, we can see that the DI-values of these multipotent cells hover around 0.4 to 0.6, consistent with their multipotent nature. Observe the stability of the DI estimates. Second, there is nevertheless a significant increase in DI-values from the more multipotent and less differentiated cells (HSCs) to the least potent and more differentiated (GMP). To check that the increase of DI is statistically significant, we can run this:
+
+```{r chunk4, eval=T, echo=T}
+print(summary(lm(ediff.o$di ~ order.idx))$coeff[2,4])
+```
+So, it is clearly significant.
+
+
+# Session Info
+```{r sessionInfo, eval=T, echo=T}
+sessionInfo()
+```
+
+# References
